@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login | Group Travel Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+    <div class="auth-shell">
+        <section class="auth-card">
+            <p class="auth-kicker">Group Trips Made Easy</p>
+            <h1>Welcome Back, Traveler</h1>
+            <p class="auth-subtitle">Sign in to access trip planning, hotels, expenses, and your AI travel assistant.</p>
+            <div class="auth-chip-row">
+                <span class="auth-chip">Smart Itinerary</span>
+                <span class="auth-chip">Hotel Match</span>
+                <span class="auth-chip">Expense Split</span>
+                <span class="auth-chip">Travel Assistant</span>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-wrap">
+                    {% for category, message in messages %}
+                    <p class="flash-{{ category }}">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="post" class="auth-form">
+                <label for="login_id">Username or Email</label>
+                <input id="login_id" name="login_id" value="{{ form.login_id }}" placeholder="Enter username or email" required>
+                {% if errors.login_id %}
+                <p class="field-error">{{ errors.login_id }}</p>
+                {% endif %}
+
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" placeholder="Enter strong password" required>
+                {% if errors.password %}
+                <p class="field-error">{{ errors.password }}</p>
+                {% endif %}
+
+                <button type="submit">Login to Dashboard</button>
+            </form>
+
+            <p class="auth-tip">Tip: Use your registered username/email and keep a strong password.</p>
+
+            <details class="forgot-section">
+                <summary>Forgot password?</summary>
+                <form method="post" action="{{ url_for('forgot_password') }}" class="forgot-form">
+                    <label for="recovery_identifier">Username or Email</label>
+                    <input id="recovery_identifier" name="recovery_identifier" placeholder="Enter registered username or email" required>
+
+                    <label for="new_password">New Password</label>
+                    <input id="new_password" name="new_password" type="password" placeholder="Enter new strong password" required>
+
+                    <label for="confirm_password">Confirm Password</label>
+                    <input id="confirm_password" name="confirm_password" type="password" placeholder="Confirm new password" required>
+
+                    <button type="submit">Reset Password</button>
+                </form>
+            </details>
+        </section>
+
+        <aside class="auth-points">
+            <h2>Necessary Points</h2>
+            <p class="auth-points-sub">Quick checks before login</p>
+            <ul class="auth-points-list">
+                <li>Login supports either username or email in one field</li>
+                <li>Password must include uppercase, lowercase, number, and special character</li>
+                <li>Minimum password length is 8 characters</li>
+                <li>Use forgot password section to reset your account password</li>
+                <li>Never share your password with others</li>
+            </ul>
+        </aside>
+    </div>
+</body>
+</html>

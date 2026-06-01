@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Group Travel Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+
+<body class="dashboard-page">
+    <div class="page-bg">
+        <div class="dashboard-shell">
+            <header class="topbar">
+                <div class="brand">
+                    <div class="brand-mark"><img src="{{ url_for('static', filename='images/gtp-logo.svg') }}" alt="Group Travel Planner logo"></div>
+                    <div class="brand-text">
+                        <p class="brand-title">Group Travel Planner</p>
+                        <p class="brand-sub">Plan smarter. Travel together.</p>
+                    </div>
+                </div>
+                <nav class="menu">
+                    <a class="menu-link" href="#home" data-output="Home dashboard loaded.">Home</a>
+                    <a href="{{ url_for('hotels_page', destination=form.destination, budget=form.budget, starting_point=form.starting_point, people=form.people) }}">Hotels</a>
+                    <a href="{{ url_for('chatbot_page', destination=form.destination, budget=form.budget, starting_point=form.starting_point, people=form.people) }}">AI Chatbot</a>
+                    <a class="menu-link" href="#trip-planner"
+                        data-output="Trip Planner opened. Fill details and generate itinerary.">Trip Planner</a>
+                    <a class="menu-link" href="#expenses"
+                        data-output="Expenses section opened. Use Split Expense for exact share.">Expenses</a>
+                </nav>
+                <div class="profile">
+                    <span class="profile-dot"></span>
+                    <span class="profile-name">{{ user.display_name }}</span>
+                    <a class="logout-link" href="{{ url_for('logout') }}">Logout</a>
+                </div>
+            </header>
+
+            <main class="grid" id="home">
+                <article class="card slogan-card" aria-label="Travel slogans">
+                    <div class="slogan-track">
+                        <p class="slogan-text">"Take only memories, leave only footprints,"  |  "Collect moments, not things,"  |  "Adventure awaits"</p>
+                    </div>
+                </article>
+
+                <article class="card status-card">
+                    <h2>Action Output</h2>
+                    <p id="action-output">{{ action_output }}</p>
+                </article>
+
+                <section class="left-column">
+                    <article class="card" id="trip-planner">
+                        <h2>Plan Your Trip</h2>
+                        <form method="post" class="trip-form">
+                            <label for="starting_point">Starting Point</label>
+                            <input id="starting_point" name="starting_point" value="{{ form.starting_point }}"
+                                list="india-places" required>
+
+                            <label for="destination">Destination</label>
+                            <input id="destination" name="destination" value="{{ form.destination }}"
+                                list="india-places" required>
+                            <datalist id="india-places">
+                                {% for place in india_places %}
+                                <option value="{{ place }}"></option>
+                                {% endfor %}
+                            </datalist>
+
+                            <label for="people">People</label>
+                            <select id="people" name="people">
+                                {% for value in [2, 3, 4, 5, 6, 8] %}
+                                <option value="{{ value }}" {% if form.people==value %}selected{% endif %}>{{ value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+
+                            <label for="budget">Budget</label>
+                            <select id="budget" name="budget">
+                                {% for value in [15000, 20000, 30000, 45000, 60000] %}
+                                <option value="{{ value }}" {% if form.budget==value %}selected{% endif %}>Rs {{ value
+                                    }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <button type="submit">Generate Itinerary</button>
+                        </form>
+                    </article>
+
+                    <article class="card" id="expenses">
+                        <h2>Expense Splitter</h2>
+                        <div class="expense-row">
+                            <span>Total Expense:</span>
+                            <strong id="total-expense" data-total="{{ total_expense }}">Rs {{ total_expense }}</strong>
+                        </div>
+                        <div class="expense-row">
+                            <span>Number of People:</span>
+                            <strong id="people-count">{{ form.people }}</strong>
+                        </div>
+                        <div class="expense-row">
+                            <span>Each Pays:</span>
+                            <strong id="per-person">Rs {{ per_person }}</strong>
+                        </div>
+                        <button class="secondary-btn" type="button" id="split-btn">Split Expense</button>
+                    </article>
+                </section>
+
+                <section class="middle-column">
+                    <article class="card highlight">
+                        <h2>AI Generated Itinerary</h2>
+                        <ul class="itinerary-list">
+                            {% for item in itinerary %}
+                            <li>
+                                <strong>Day {{ item.day }}:</strong>
+                                <span>{{ item.title }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="famous-spots">
+                            <h3>Must-Visit Famous Spots in {{ form.destination | default('Destination', true) | title }}
+                            </h3>
+                            <p class="spot-source">Reference: {{ 'Google Places' if famous_spots_source == 'google-places' else 'Destination Profile' }}</p>
+                            <ul>
+                                {% for spot in famous_spots %}
+                                <li>{{ spot }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </article>
+
+                    <article class="card">
+                        <div class="map-header">
+                            <h2>Route Map</h2>
+                            <span class="map-badge">Map</span>
+                        </div>
+                        <div class="route-summary">
+                            <p id="route-name">{{ route_info.route_name | default('Route unavailable', true) }}</p>
+                            <p id="route-distance">{{ route_info.distance_display | default('Distance unavailable',
+                                true) }}</p>
+                            <p id="distance-source">Source: {{ route_info.source | default('unknown', true) }}</p>
+                            <p id="start-place" class="route-point">From: {{ route_info.start_name | default('Start',
+                                true) }}</p>
+                            <p id="destination-place" class="route-point">To: {{ route_info.destination_name |
+                                default('Destination', true) }}</p>
+                        </div>
+                        <div class="map">
+                            <div id="google-map" role="img"
+                                aria-label="Google route map from {{ route_info.start_name | default('Start', true) }} to {{ route_info.destination_name | default('Destination', true) }}">
+                            </div>
+                            <div class="map-distance-pill" id="map-distance-pill" role="status" aria-live="polite">
+                                Distance: {{ route_info.distance_display | default('Distance unavailable', true) }}
+                            </div>
+                            <p class="map-fallback" id="map-fallback">Loading Google Map...</p>
+                        </div>
+                    </article>
+                </section>
+
+            </main>
+        </div>
+    </div>
+    <script id="hotel-markers-json" type="application/json">{{ hotel_markers | default([], true) | tojson }}</script>
+    <script defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initGoogleMap&loading=async"
+        onerror="handleGoogleMapsLoadError()"></script>
+</body>
+
+</html>

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hotel Details | Group Travel Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="page-bg">
+        <div class="dashboard-shell">
+            <header class="topbar">
+                <div class="brand">
+                    <div class="brand-mark"><img src="{{ url_for('static', filename='images/gtp-logo.svg') }}" alt="Group Travel Planner logo"></div>
+                    <div class="brand-text">
+                        <p class="brand-title">Hotel Details</p>
+                        <p class="brand-sub">{{ destination.title() }} stay information</p>
+                    </div>
+                </div>
+                <nav class="menu">
+                    <a href="{{ url_for('dashboard', starting_point=starting_point, destination=destination, budget=budget, people=people) }}">Dashboard</a>
+                    <a href="{{ url_for('dashboard', starting_point=starting_point, destination=destination, budget=budget, people=people) }}#hotels">Hotels</a>
+                </nav>
+                <div class="profile">
+                    <span class="profile-dot"></span>
+                    <span class="profile-name">{{ user.display_name }}</span>
+                    <a class="logout-link" href="{{ url_for('logout') }}">Logout</a>
+                </div>
+            </header>
+
+            <main class="hotel-page-grid">
+                <section class="card hotel-focus-card">
+                    <h2>{{ hotel.name }}</h2>
+                    <p class="hotel-area">Near {{ hotel.area }}</p>
+                    <p class="hotel-main-price">Rs {{ hotel.price }} / night</p>
+                    <p class="stars">{{ ("*" * hotel.rating) ~ ("-" * (5 - hotel.rating)) }}</p>
+                    <p class="hotel-source">Source: {{ hotel.source.replace("-", " ").title() }}</p>
+
+                    <div class="hotel-contact">
+                        <h3>Contact Details</h3>
+                        <p><strong>Phone:</strong> {{ hotel.contact_phone }}</p>
+                        <p><strong>Email:</strong> {{ hotel.contact_email }}</p>
+                        <p><strong>Address:</strong> {{ hotel.address }}</p>
+                        {% if hotel.website %}
+                        <p><strong>Website:</strong> <a href="{{ hotel.website }}" target="_blank" rel="noopener noreferrer">{{ hotel.website }}</a></p>
+                        {% endif %}
+                        {% if hotel.map_url %}
+                        <p><strong>Map:</strong> <a href="{{ hotel.map_url }}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></p>
+                        {% endif %}
+                    </div>
+
+                    <div class="hotel-route-info">
+                        <h3>Route Context</h3>
+                        <p>{{ route_info.route_name }}</p>
+                        <p>{{ route_info.distance_display }} ({{ route_info.source }})</p>
+                        <p>Budget selected: Rs {{ budget }}</p>
+                    </div>
+                </section>
+
+                <section class="card hotel-reviews-card">
+                    <h2>Guest Reviews</h2>
+                    <div class="review-list">
+                        {% for review in hotel.reviews %}
+                        <article class="review-item">
+                            <p class="review-head">
+                                <strong>{{ review.name }}</strong>
+                                <span>{{ review.rating }}/5</span>
+                            </p>
+                            <p>{{ review.comment }}</p>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="card hotel-compare-card">
+                    <h2>Nearby Hotels Price Comparison</h2>
+                    <div class="compare-list">
+                        {% for option in compare_hotels %}
+                        <article class="compare-item">
+                            <div>
+                                <p class="compare-name">{{ option.name }}</p>
+                                <p class="compare-area">Near {{ option.area }}</p>
+                            </div>
+                            <div class="compare-meta">
+                                <p>Rs {{ option.price }} / night</p>
+                                <p class="{% if option.price_diff > 0 %}diff-high{% elif option.price_diff < 0 %}diff-low{% else %}diff-equal{% endif %}">
+                                    {% if option.price_diff > 0 %}+{% endif %}{{ option.price_diff }} vs selected
+                                </p>
+                                <a
+                                    class="hotel-select-btn"
+                                    href="{{ url_for('hotel_details_page', destination=destination, hotel=option.slug, budget=budget, starting_point=starting_point, people=people) }}"
+                                >
+                                    View
+                                </a>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hotels | Group Travel Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="page-bg">
+        <div class="dashboard-shell">
+            <header class="topbar">
+                <div class="brand">
+                    <div class="brand-mark"><img src="{{ url_for('static', filename='images/gtp-logo.svg') }}" alt="Group Travel Planner logo"></div>
+                    <div class="brand-text">
+                        <p class="brand-title">Recommended Hotels</p>
+                        <p class="brand-sub">
+                            {% if show_hotels %}
+                            {{ form.destination | title }} destination stays
+                            {% else %}
+                            Enter trip places to load hotel recommendations
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <nav class="menu">
+                    <a href="{{ url_for('dashboard', starting_point=form.starting_point, destination=form.destination, budget=form.budget, people=form.people) }}">Dashboard</a>
+                    <a href="{{ url_for('chatbot_page', starting_point=form.starting_point, destination=form.destination, budget=form.budget, people=form.people) }}">AI Chatbot Page</a>
+                </nav>
+                <div class="profile">
+                    <span class="profile-dot"></span>
+                    <span class="profile-name">{{ user.display_name }}</span>
+                    <a class="logout-link" href="{{ url_for('logout') }}">Logout</a>
+                </div>
+            </header>
+
+            <main class="hotel-page-grid">
+                <section class="card hotel-focus-card">
+                    {% if show_hotels %}
+                    <h2>Hotels Near {{ form.destination | title }}</h2>
+                    <p class="hotel-area">From {{ form.starting_point | title }}</p>
+                    <p class="hotel-main-price">Budget: Rs {{ form.budget }}</p>
+                    <p>Total options loaded: {{ hotels | length }}</p>
+
+                    <div class="hotel-route-info">
+                        <h3>Route Context</h3>
+                        <p>{{ route_info.route_name }}</p>
+                        <p>{{ route_info.distance_display }} ({{ route_info.source }})</p>
+                        <p>Travelers: {{ form.people }}</p>
+                    </div>
+                    {% else %}
+                    <h2>Hotel Section Locked</h2>
+                    <p class="hotel-area">Add both places to unlock recommendations.</p>
+                    <p class="hotel-main-price">Required: Starting Point + Destination</p>
+                    <div class="hotel-route-info hotel-route-info-muted">
+                        <h3>How to Unlock</h3>
+                        <p>1. Open Dashboard.</p>
+                        <p>2. Enter starting point and destination.</p>
+                        <p>3. Click Generate Itinerary, then open Hotels page.</p>
+                    </div>
+                    {% endif %}
+                </section>
+
+                <section class="card hotel-reviews-card {% if not show_hotels %}hotel-reviews-card-empty{% endif %}">
+                    <h2>Hotel Recommendations</h2>
+                    {% if show_hotels %}
+                    <div class="hotel-list">
+                        {% for hotel in hotels %}
+                        <article class="hotel">
+                            <div class="photo">
+                                <img
+                                    src="{{ hotel.image_url }}"
+                                    alt="{{ hotel.name }}"
+                                    loading="lazy"
+                                    referrerpolicy="no-referrer"
+                                >
+                            </div>
+                            <div class="hotel-details">
+                                <h3>{{ hotel.name }}</h3>
+                                <p class="hotel-area">Near {{ hotel.area }}</p>
+                                <p>Rs {{ hotel.price }} / night</p>
+                                <p class="stars">{{ ("*" * hotel.rating) ~ ("-" * (5 - hotel.rating)) }}</p>
+                                <a class="hotel-select-btn"
+                                    href="{{ url_for('hotel_details_page', destination=form.destination, hotel=hotel.slug, budget=form.budget, starting_point=form.starting_point, people=form.people) }}">
+                                    Select Hotel
+                                </a>
+                                <p class="hotel-source">Source: {{ hotel.source | default('local-recommendation', true) | replace('-', ' ') | title }}</p>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="hotel-empty-state">
+                        <p class="hotel-empty-title">Hotel section is black until trip places are entered.</p>
+                        <p>Enter both Starting Point and Destination on Dashboard to load nearby recommendations.</p>
+                        <a class="hotel-select-btn" href="{{ url_for('dashboard') }}">Go to Dashboard</a>
+                    </div>
+                    {% endif %}
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+
+</html>

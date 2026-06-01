@@ -1,0 +1,91 @@
+﻿<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Chatbot | Group Travel Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script defer src="{{ url_for('static', filename='script.js') }}"></script>
+</head>
+
+<body>
+    <div class="page-bg">
+        <div class="dashboard-shell">
+            <header class="topbar">
+                <div class="brand">
+                    <div class="brand-mark"><img src="{{ url_for('static', filename='images/gtp-logo.svg') }}" alt="Group Travel Planner logo"></div>
+                    <div class="brand-text">
+                        <p class="brand-title">AI Travel Assistant</p>
+                        <p class="brand-sub">Ask destination and visited-place questions</p>
+                    </div>
+                </div>
+                <nav class="menu">
+                    <a href="{{ url_for('dashboard', starting_point=form.starting_point, destination=form.destination, budget=form.budget, people=form.people) }}">Dashboard</a>
+                    <a href="{{ url_for('hotels_page', starting_point=form.starting_point, destination=form.destination, budget=form.budget, people=form.people) }}">Hotels Page</a>
+                </nav>
+                <div class="profile">
+                    <span class="profile-dot"></span>
+                    <span class="profile-name">{{ user.display_name }}</span>
+                    <a class="logout-link" href="{{ url_for('logout') }}">Logout</a>
+                </div>
+            </header>
+
+            <main class="hotel-page-grid">
+                <section class="card hotel-focus-card">
+                    <h2>Chat Context</h2>
+                    <p id="action-output">{{ action_output }}</p>
+                    <form class="trip-form" onsubmit="return false;">
+                        <label for="starting_point">Starting Point</label>
+                        <input id="starting_point" name="starting_point" value="{{ form.starting_point }}" list="india-places">
+
+                        <label for="destination">Destination</label>
+                        <input id="destination" name="destination" value="{{ form.destination }}" list="india-places">
+                        <datalist id="india-places">
+                            {% for place in india_places %}
+                            <option value="{{ place }}"></option>
+                            {% endfor %}
+                        </datalist>
+
+                        <label for="people">People</label>
+                        <select id="people" name="people">
+                            {% for value in [2, 3, 4, 5, 6, 8] %}
+                            <option value="{{ value }}" {% if form.people == value %}selected{% endif %}>{{ value }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <label for="budget">Budget</label>
+                        <select id="budget" name="budget">
+                            {% for value in [15000, 20000, 30000, 45000, 60000] %}
+                            <option value="{{ value }}" {% if form.budget == value %}selected{% endif %}>Rs {{ value }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+
+                    <div class="expense-row">
+                        <span>Total Expense:</span>
+                        <strong id="total-expense" data-total="{{ total_expense }}">Rs {{ total_expense }}</strong>
+                    </div>
+                </section>
+
+                <section class="card chat-card">
+                    <h2>AI Travel Assistant</h2>
+                    <div class="chat-window" id="chat-window">
+                        <div class="message bot">Hi! Ask me about itinerary, places, food, activities, budget, hotels, and visited places.</div>
+                    </div>
+                    <div class="quick-replies">
+                        {% for reply in quick_replies %}
+                        <button class="reply-btn" type="button" data-reply="{{ reply }}">{{ reply }}</button>
+                        {% endfor %}
+                    </div>
+                    <div class="chat-input">
+                        <input id="chat-text" type="text" placeholder="Type a message...">
+                        <button id="send-btn" type="button">Send</button>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+
+</html>
