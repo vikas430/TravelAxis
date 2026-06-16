@@ -18,8 +18,8 @@ from flask import Flask, flash, jsonify, redirect, render_template, request, ses
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "group-travel-planner-dev-key")
-GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "API_Key")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "API_KEY").strip()
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyBrvfi0fVxXNCkKYyijPS7hL8tPTcuoEnI")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-18ce200274c94e5d8aeffcc337ad52d4").strip()
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip()
 try:
     FAMOUS_SPOTS_CACHE_TTL_SEC = max(300, int(os.getenv("FAMOUS_SPOTS_CACHE_TTL_SEC", "21600")))
