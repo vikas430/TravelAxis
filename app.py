@@ -7,6 +7,7 @@ import operator
 import os
 import random
 import re
+import secrets
 import time
 from datetime import datetime, timedelta
 from copy import deepcopy
@@ -20,10 +21,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "group-travel-planner-dev-key")
-GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyBrvfi0fVxXNCkKYyijPS7hL8tPTcuoEnI")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-18ce200274c94e5d8aeffcc337ad52d4").strip()
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat").strip()
+
+
+def env_value(name: str, default: str = "") -> str:
+    return os.getenv(name, default).strip()
+
+
+app.secret_key = env_value("FLASK_SECRET_KEY") or secrets.token_urlsafe(32)
+GOOGLE_MAPS_API_KEY = env_value("GOOGLE_MAPS_API_KEY")
+OPENAI_API_KEY = env_value("OPENAI_API_KEY")
+OPENAI_MODEL = env_value("OPENAI_MODEL", "openai/gpt-3.5-turbo")
+DEEPSEEK_API_KEY = env_value("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = env_value("DEEPSEEK_MODEL", "deepseek-chat")
 try:
     FAMOUS_SPOTS_CACHE_TTL_SEC = max(300, int(os.getenv("FAMOUS_SPOTS_CACHE_TTL_SEC", "21600")))
 except ValueError:
