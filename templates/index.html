@@ -142,13 +142,17 @@
                                 default('Destination', true) }}</p>
                         </div>
                         <div class="map">
-                            <div id="google-map" role="img"
+                            <iframe id="fallback-map" class="fallback-map{% if google_maps_api_key %} hidden{% endif %}"
+                                title="Google route map fallback" loading="lazy" allowfullscreen
+                                referrerpolicy="no-referrer-when-downgrade"
+                                src="https://maps.google.com/maps?q=India&amp;z=5&amp;output=embed"></iframe>
+                            <div id="google-map" class="{% if not google_maps_api_key %}map-disabled{% endif %}" role="img"
                                 aria-label="Google route map from {{ route_info.start_name | default('Start', true) }} to {{ route_info.destination_name | default('Destination', true) }}">
                             </div>
                             <div class="map-distance-pill" id="map-distance-pill" role="status" aria-live="polite">
                                 Distance: {{ route_info.distance_display | default('Distance unavailable', true) }}
                             </div>
-                            <p class="map-fallback" id="map-fallback">Loading Google Map...</p>
+                            <p class="map-fallback hidden" id="map-fallback">Loading Google Map...</p>
                         </div>
                     </article>
                 </section>
@@ -157,9 +161,19 @@
         </div>
     </div>
     <script id="hotel-markers-json" type="application/json">{{ hotel_markers | default([], true) | tojson }}</script>
+    {% if google_maps_api_key %}
     <script defer
         src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initGoogleMap&loading=async"
         onerror="handleGoogleMapsLoadError()"></script>
+    {% else %}
+    <script>
+        window.addEventListener("DOMContentLoaded", function () {
+            if (typeof window.initFallbackMap === "function") {
+                window.initFallbackMap();
+            }
+        });
+    </script>
+    {% endif %}
 </body>
 
 </html>

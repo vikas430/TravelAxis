@@ -20,6 +20,7 @@ const distanceSourceEl = document.getElementById("distance-source");
 const startPlaceEl = document.getElementById("start-place");
 const destinationPlaceEl = document.getElementById("destination-place");
 const googleMapEl = document.getElementById("google-map");
+const fallbackMapEl = document.getElementById("fallback-map");
 const mapFallbackEl = document.getElementById("map-fallback");
 const mapDistancePillEl = document.getElementById("map-distance-pill");
 const hotelMarkersJsonEl = document.getElementById("hotel-markers-json");
@@ -51,6 +52,7 @@ let hotelInfoWindow = null;
 let routeFallbackStartMarker = null;
 let routeFallbackEndMarker = null;
 let routeFallbackLine = null;
+const DEFAULT_GOOGLE_EMBED_URL = "https://maps.google.com/maps?q=India&z=5&output=embed";
 
 function setMapFallbackMessage(message, isError = false) {
     if (!mapFallbackEl) return;
@@ -76,18 +78,108 @@ function setMapDistanceBadge(distanceDisplay, duration = "", isError = false) {
     mapDistancePillEl.classList.toggle("error", Boolean(isError));
 }
 
+function setFallbackMapVisible(isVisible) {
+    if (fallbackMapEl) {
+        fallbackMapEl.classList.toggle("hidden", !isVisible);
+    }
+    if (googleMapEl) {
+        googleMapEl.classList.toggle("map-disabled", isVisible);
+    }
+}
+
+function initializeFallbackMap() {
+    if (!fallbackMapEl) {
+        return false;
+    }
+
+    setFallbackMapVisible(true);
+    if (!fallbackMapEl.getAttribute("src")) {
+        fallbackMapEl.setAttribute("src", DEFAULT_GOOGLE_EMBED_URL);
+    }
+    return true;
+}
+
+function setFallbackMapSource(url) {
+    if (!fallbackMapEl || !url) return;
+    if (fallbackMapEl.getAttribute("src") !== url) {
+        fallbackMapEl.setAttribute("src", url);
+    }
+}
+
+function buildGoogleEmbedUrl(params) {
+    const url = new URL("https://maps.google.com/maps");
+    Object.entries(params).forEach(([key, value]) => {
+        const cleanValue = String(value || "").trim();
+        if (cleanValue) {
+            url.searchParams.set(key, cleanValue);
+        }
+    });
+    url.searchParams.set("output", "embed");
+    return url.toString();
+}
+
+function routePointLabel(point, fallbackLabel) {
+    const normalized = normalizeMapCoords(point);
+    if (normalized) {
+        return `${normalized.lat.toFixed(5)},${normalized.lng.toFixed(5)}`;
+    }
+    return String(fallbackLabel || "").trim();
+}
+
+function renderFallbackRoute(path, startLabel = "Start", destinationLabel = "Destination") {
+    if (!initializeFallbackMap()) {
+        return false;
+    }
+
+    const routePath = (Array.isArray(path) ? path : [])
+        .map((point) => normalizeMapCoords(point))
+        .filter(Boolean);
+
+    if (routePath.length < 2) {
+        return false;
+    }
+
+    setFallbackMapSource(buildGoogleEmbedUrl({
+        saddr: routePointLabel(routePath[0], startLabel),
+        daddr: routePointLabel(routePath[routePath.length - 1], destinationLabel),
+        dirflg: "d",
+    }));
+    return true;
+}
+
+function updateFallbackMapView(startCoords, endCoords) {
+    if (!initializeFallbackMap()) return;
+
+    const points = [normalizeMapCoords(startCoords), normalizeMapCoords(endCoords)].filter(Boolean);
+    if (!points.length) return;
+
+    if (points.length >= 2) {
+        renderFallbackRoute(points);
+        return;
+    }
+
+    setFallbackMapSource(buildGoogleEmbedUrl({
+        q: routePointLabel(points[0], "India"),
+        z: "8",
+    }));
+}
+
 function initializeGoogleMap() {
     if (!googleMapEl || !window.google || !window.google.maps) {
         return false;
     }
 
+    setFallbackMapVisible(false);
+
     if (!googleMap) {
         googleMap = new window.google.maps.Map(googleMapEl, {
             center: { lat: 22.9734, lng: 78.6569 },
             zoom: 5,
+            mapTypeId: window.google.maps.MapTypeId.ROADMAP,
             mapTypeControl: false,
             streetViewControl: false,
             fullscreenControl: true,
+            styles: [],
         });
     }
 
@@ -134,9 +226,6 @@ function normalizeMapCoords(rawCoords) {
 }
 
 async function requestOsrmRoadRoute(startCoords, endCoords, startLabel = "Start", destinationLabel = "Destination") {
-    if (!initializeGoogleMap()) {
-        return { ok: false, reason: "map-not-ready" };
-    }
     const start = normalizeMapCoords(startCoords);
     const end = normalizeMapCoords(endCoords);
     if (!start || !end) {
@@ -164,35 +253,39 @@ async function requestOsrmRoadRoute(startCoords, endCoords, startLabel = "Start"
             return { ok: false, reason: "osrm-invalid-geometry" };
         }
 
-        if (directionsRenderer) {
-            directionsRenderer.set("directions", null);
+        if (initializeGoogleMap()) {
+            if (directionsRenderer) {
+                directionsRenderer.set("directions", null);
+            }
+            clearRouteFallbackGraphics();
+
+            routeFallbackStartMarker = new window.google.maps.Marker({
+                map: googleMap,
+                position: path[0],
+                label: "A",
+                title: startLabel,
+            });
+            routeFallbackEndMarker = new window.google.maps.Marker({
+                map: googleMap,
+                position: path[path.length - 1],
+                label: "B",
+                title: destinationLabel,
+            });
+            routeFallbackLine = new window.google.maps.Polyline({
+                map: googleMap,
+                path: path,
+                geodesic: false,
+                strokeColor: "#1a73e8",
+                strokeOpacity: 0.95,
+                strokeWeight: 6,
+            });
+
+            const bounds = new window.google.maps.LatLngBounds();
+            path.forEach((point) => bounds.extend(point));
+            googleMap.fitBounds(bounds);
+        } else {
+            renderFallbackRoute(path, startLabel, destinationLabel);
         }
-        clearRouteFallbackGraphics();
-
-        routeFallbackStartMarker = new window.google.maps.Marker({
-            map: googleMap,
-            position: path[0],
-            label: "A",
-            title: startLabel,
-        });
-        routeFallbackEndMarker = new window.google.maps.Marker({
-            map: googleMap,
-            position: path[path.length - 1],
-            label: "B",
-            title: destinationLabel,
-        });
-        routeFallbackLine = new window.google.maps.Polyline({
-            map: googleMap,
-            path: path,
-            geodesic: false,
-            strokeColor: "#1d63d0",
-            strokeOpacity: 0.9,
-            strokeWeight: 5,
-        });
-
-        const bounds = new window.google.maps.LatLngBounds();
-        path.forEach((point) => bounds.extend(point));
-        googleMap.fitBounds(bounds);
 
         const distanceKm = Number(route.distance || 0) / 1000;
         const durationMin = Math.max(1, Math.round(Number(route.duration || 0) / 60));
@@ -325,6 +418,7 @@ function renderNearbyHotelMarkers(hotels) {
 window.initGoogleMap = function initGoogleMap() {
     if (!initializeGoogleMap()) {
         setMapFallbackMessage("Google Map could not initialize.", true);
+        setFallbackMapVisible(true);
         return;
     }
     renderNearbyHotelMarkers(dashboardHotels);
@@ -332,10 +426,25 @@ window.initGoogleMap = function initGoogleMap() {
     queueDistanceUpdate();
 };
 
-window.handleGoogleMapsLoadError = function handleGoogleMapsLoadError() {
-    setMapFallbackMessage("Google Map failed to load. Check API key and billing setup.", true);
+window.initFallbackMap = function initFallbackMap() {
+    if (initializeFallbackMap()) {
+        setMapFallbackMessage("");
+    } else {
+        setMapFallbackMessage("Map library could not load. Check your internet connection.", true);
+    }
+    queueDistanceUpdate(true);
+};
+
+window.handleGoogleMapsLoadError = function handleGoogleMapsLoadError(message) {
+    const fallbackMessage = message || "Google Map failed to load. Check API key and billing setup.";
+    setFallbackMapVisible(true);
+    setMapFallbackMessage(fallbackMessage, true);
     setMapDistanceBadge(routeDistanceEl?.textContent || "Distance unavailable", "", true);
-    setOutputMessage("Google Maps failed to load. Route details are temporarily unavailable.");
+    setOutputMessage(fallbackMessage);
+};
+
+window.gm_authFailure = function gmAuthFailure() {
+    window.handleGoogleMapsLoadError("Google Maps authorization failed. Showing fallback map.");
 };
 
 function requestGoogleRoute(startingPoint, destination) {
@@ -591,6 +700,7 @@ async function updateRouteDistance() {
 
         const startCoords = normalizeMapCoords(payload.start_coords);
         const destinationCoords = normalizeMapCoords(payload.destination_coords);
+        updateFallbackMapView(startCoords, destinationCoords);
 
         const coordinateRoute = await requestGoogleRouteWithCoordinates(
             startCoords,
@@ -646,7 +756,18 @@ async function updateRouteDistance() {
             payload.source || "unknown"
         );
 
-        setMapFallbackMessage("Road-by-road route is unavailable for this pair.", true);
+        const approximateRouteVisible = renderFallbackRoute(
+            [startCoords, destinationCoords],
+            payload.start_name || startingPoint,
+            payload.destination_name || destination
+        );
+
+        setMapFallbackMessage(
+            approximateRouteVisible
+                ? "Approximate route line shown."
+                : "Road-by-road route is unavailable for this pair.",
+            !approximateRouteVisible
+        );
 
         if (response.status >= 400) {
             setOutputMessage(payload.message || payload.distance_display || "Distance could not be fetched.");
