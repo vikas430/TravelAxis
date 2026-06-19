@@ -118,6 +118,30 @@ function buildGoogleEmbedUrl(params) {
     return url.toString();
 }
 
+function hasMeaningfulRouteLabel(label, placeholder) {
+    const cleanLabel = String(label || "").trim();
+    return Boolean(cleanLabel && cleanLabel.toLowerCase() !== String(placeholder || "").toLowerCase());
+}
+
+function renderFallbackRouteByLabels(startLabel = "Start", destinationLabel = "Destination") {
+    if (!initializeFallbackMap()) {
+        return false;
+    }
+
+    const hasStart = hasMeaningfulRouteLabel(startLabel, "Start");
+    const hasDestination = hasMeaningfulRouteLabel(destinationLabel, "Destination");
+    if (!hasStart || !hasDestination) {
+        return false;
+    }
+
+    setFallbackMapSource(buildGoogleEmbedUrl({
+        saddr: startLabel,
+        daddr: destinationLabel,
+        dirflg: "d",
+    }));
+    return true;
+}
+
 function routePointLabel(point, fallbackLabel, preferFallback = false) {
     const cleanFallback = String(fallbackLabel || "").trim();
     if (preferFallback && cleanFallback) {
@@ -141,7 +165,7 @@ function renderFallbackRoute(path, startLabel = "Start", destinationLabel = "Des
         .filter(Boolean);
 
     if (routePath.length < 2) {
-        return false;
+        return renderFallbackRouteByLabels(startLabel, destinationLabel);
     }
 
     setFallbackMapSource(buildGoogleEmbedUrl({
@@ -156,7 +180,10 @@ function updateFallbackMapView(startCoords, endCoords, startLabel = "Start", des
     if (!initializeFallbackMap()) return;
 
     const points = [normalizeMapCoords(startCoords), normalizeMapCoords(endCoords)].filter(Boolean);
-    if (!points.length) return;
+    if (!points.length) {
+        renderFallbackRouteByLabels(startLabel, destinationLabel);
+        return;
+    }
 
     if (points.length >= 2) {
         renderFallbackRoute(points, startLabel, destinationLabel);
@@ -701,6 +728,8 @@ async function updateRouteDistance() {
         markRouteUpdate(routeKey);
         return;
     }
+
+    renderFallbackRouteByLabels(startingPoint, destination);
 
     try {
         abortActiveDistanceFetch();
