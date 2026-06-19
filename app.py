@@ -2468,8 +2468,8 @@ def fetch_osrm_distance_km(start: tuple[float, float], end: tuple[float, float])
 
 
 def compute_trip_distance(starting_point: str, destination: str, use_online: bool = True) -> dict[str, object]:
-    start_label = starting_point.strip().title() or "Start"
-    destination_label = destination.strip().title() or "Destination"
+    start_label = starting_point.strip() or "Start"
+    destination_label = destination.strip() or "Destination"
     start_key = normalize_place(starting_point)
     destination_key = normalize_place(destination)
     start_coords = CITY_COORDINATES.get(start_key)

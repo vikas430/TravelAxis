@@ -118,12 +118,17 @@ function buildGoogleEmbedUrl(params) {
     return url.toString();
 }
 
-function routePointLabel(point, fallbackLabel) {
+function routePointLabel(point, fallbackLabel, preferFallback = false) {
+    const cleanFallback = String(fallbackLabel || "").trim();
+    if (preferFallback && cleanFallback) {
+        return cleanFallback;
+    }
+
     const normalized = normalizeMapCoords(point);
     if (normalized) {
         return `${normalized.lat.toFixed(5)},${normalized.lng.toFixed(5)}`;
     }
-    return String(fallbackLabel || "").trim();
+    return cleanFallback;
 }
 
 function renderFallbackRoute(path, startLabel = "Start", destinationLabel = "Destination") {
@@ -140,26 +145,26 @@ function renderFallbackRoute(path, startLabel = "Start", destinationLabel = "Des
     }
 
     setFallbackMapSource(buildGoogleEmbedUrl({
-        saddr: routePointLabel(routePath[0], startLabel),
-        daddr: routePointLabel(routePath[routePath.length - 1], destinationLabel),
+        saddr: routePointLabel(routePath[0], startLabel, true),
+        daddr: routePointLabel(routePath[routePath.length - 1], destinationLabel, true),
         dirflg: "d",
     }));
     return true;
 }
 
-function updateFallbackMapView(startCoords, endCoords) {
+function updateFallbackMapView(startCoords, endCoords, startLabel = "Start", destinationLabel = "Destination") {
     if (!initializeFallbackMap()) return;
 
     const points = [normalizeMapCoords(startCoords), normalizeMapCoords(endCoords)].filter(Boolean);
     if (!points.length) return;
 
     if (points.length >= 2) {
-        renderFallbackRoute(points);
+        renderFallbackRoute(points, startLabel, destinationLabel);
         return;
     }
 
     setFallbackMapSource(buildGoogleEmbedUrl({
-        q: routePointLabel(points[0], "India"),
+        q: routePointLabel(points[0], startLabel || destinationLabel || "India", true),
         z: "8",
     }));
 }
@@ -190,7 +195,7 @@ function initializeGoogleMap() {
     if (!directionsRenderer) {
         directionsRenderer = new window.google.maps.DirectionsRenderer({
             map: googleMap,
-            suppressMarkers: false,
+            suppressMarkers: true,
             polylineOptions: {
                 strokeColor: "#1d63d0",
                 strokeOpacity: 0.9,
@@ -211,6 +216,25 @@ function clearRouteFallbackGraphics() {
     routeFallbackStartMarker = null;
     routeFallbackEndMarker = null;
     routeFallbackLine = null;
+}
+
+function renderRouteEndpointMarkers(startPosition, endPosition, startLabel = "Start", destinationLabel = "Destination") {
+    if (!initializeGoogleMap() || !startPosition || !endPosition) {
+        return;
+    }
+
+    routeFallbackStartMarker = new window.google.maps.Marker({
+        map: googleMap,
+        position: startPosition,
+        title: String(startLabel || "Start").trim(),
+        label: "A",
+    });
+    routeFallbackEndMarker = new window.google.maps.Marker({
+        map: googleMap,
+        position: endPosition,
+        title: String(destinationLabel || "Destination").trim(),
+        label: "B",
+    });
 }
 
 function normalizeMapCoords(rawCoords) {
@@ -333,9 +357,12 @@ function requestGoogleRouteWithCoordinates(startCoords, endCoords, startLabel = 
                     clearRouteFallbackGraphics();
                     directionsRenderer.setDirections(result);
                     const leg = result.routes[0]?.legs?.[0];
+                    if (leg?.start_location && leg?.end_location) {
+                        renderRouteEndpointMarkers(leg.start_location, leg.end_location, startLabel, destinationLabel);
+                    }
                     resolve({
                         ok: true,
-                        route_name: leg ? `${leg.start_address} to ${leg.end_address}` : `${startLabel} to ${destinationLabel}` ,
+                        route_name: `${startLabel} to ${destinationLabel}`,
                         distance_display: leg?.distance?.text || "Distance unavailable",
                         duration: leg?.duration?.text || "",
                         source: "Google Maps Directions (coords)",
@@ -481,9 +508,10 @@ function requestGoogleRoute(startingPoint, destination) {
                     setMapFallbackMessage("");
 
                     const leg = result.routes[0]?.legs?.[0];
-                    const routeName = leg
-                        ? `${leg.start_address} to ${leg.end_address}`
-                        : `${startingPoint} to ${destination}`;
+                    if (leg?.start_location && leg?.end_location) {
+                        renderRouteEndpointMarkers(leg.start_location, leg.end_location, startingPoint, destination);
+                    }
+                    const routeName = `${startingPoint} to ${destination}`;
                     const distanceDisplay = leg?.distance?.text || "Distance unavailable";
                     const duration = leg?.duration?.text || "";
 
@@ -700,7 +728,7 @@ async function updateRouteDistance() {
 
         const startCoords = normalizeMapCoords(payload.start_coords);
         const destinationCoords = normalizeMapCoords(payload.destination_coords);
-        updateFallbackMapView(startCoords, destinationCoords);
+        updateFallbackMapView(startCoords, destinationCoords, startingPoint, destination);
 
         const coordinateRoute = await requestGoogleRouteWithCoordinates(
             startCoords,
